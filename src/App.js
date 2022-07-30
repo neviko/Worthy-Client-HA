@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import _ from 'lodash'
 import './App.css';
 import { Button, Card, CardContent, CardHeader, Dropdown, Image, Input } from 'semantic-ui-react';
@@ -9,8 +9,6 @@ import Spinner from './components/Spinner';
 const COLORS=['D','E','F','G','H','I','J']
 const CLARITY = ['SI2','SI1','VS2','VS1','VVS2','VVS1','IF','FL']
 const CUT = ['POOR','FAIR','GOOD','VERY_GOOD','IDEAL','SUPER_IDEAL']
-
-
 
 const colorOptions = _.map(COLORS, (state, index) => ({
   key: index,
@@ -30,8 +28,6 @@ const cutOptions = _.map(CUT, (state, index) => ({
   value: state
 }));
 
-
-
 function App() {
   const [carat,setCarat] = useState()
   const [color,setColor] = useState()
@@ -40,8 +36,45 @@ function App() {
   const [price,setPrice] = useState(0)
   const [showSpinner,setShowSpinner] = useState(false)
   const [errMessage,setErrMessage] = useState('')
-  const [suggesedDiamonds,setSuggesedDiamonds] = useState([])
+  const [suggestedDiamonds,setSuggestedDiamonds] = useState([])
 
+
+  useEffect(() => {
+    const handleSubmit = async ()=>{
+      if(!color || !clarity || !cut){
+        return
+      }
+      if(carat > 0){ // validates it's not a symbol too
+        setSuggestedDiamonds([])
+        setShowSpinner(true)
+  
+        try{
+          const options={
+            mode:'cors',
+            headers:{'Content-Type':'application/json', 'Access-Control-Allow-Origin': '*'},
+            method:'GET',
+            cache: "no-cache"
+          }
+          const url = `http://localhost:3001/evaluation?carat_weight=${carat}&color=${color}&clarity=${clarity}&cut=${cut}`
+          const response = await fetch(url,options)
+          const data = await response.json()
+          setPrice(data.evaluatedPrice)
+  
+        }
+        catch(e){
+          console.error('something went wrong while fetching data from API',e.message)
+        }
+        finally{
+          setShowSpinner(false)
+        }
+      }  
+    }
+    (async ()=>  {
+      await handleSubmit()
+    })()
+
+  }, [carat,clarity,color,cut])
+  
 
   const handleCaratChange = (event,data)=>{
     event.preventDefault()
@@ -52,8 +85,6 @@ function App() {
     else{
       setErrMessage('Carat weight should be a positive number')
     }
-  
-    
   }
 
   const handleColorChange = (event,data)=>{
@@ -71,32 +102,6 @@ function App() {
     setCut(data.value)
   }
 
-  const handleSubmit = async (event)=>{
-    event.preventDefault()
-    setShowSpinner(true)
-
-    try{
-      const options={
-        mode:'cors',
-        headers:{'Content-Type':'application/json', 'Access-Control-Allow-Origin': '*'},
-        method:'GET',
-        cache: "no-cache"
-      }
-      const url = `http://localhost:3001/evaluation?carat_weight=${carat}&color=${color}&clarity=${clarity}&cut=${cut}`
-      const response = await fetch(url,options)
-      const data = await response.json()
-      setPrice(data.evaluatedPrice)
-
-    }
-    catch(e){
-      console.error('something went wrong while fetching data from API',e.message)
-    }
-    finally{
-      setShowSpinner(false)
-    }
-    
-  }
-
   const handleSuggestions = async (event)=>{
     event.preventDefault()
     setShowSpinner(true)
@@ -112,7 +117,7 @@ function App() {
       const response = await fetch(url,options)
       const data = await response.json()
       debugger
-      setSuggesedDiamonds(data.similarDiamonds)
+      setSuggestedDiamonds(data.similarDiamonds)
 
     }
     catch(e){
@@ -126,7 +131,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>DIamonds Price Calculator</h1>
+      <h1>Diamonds Price Calculator</h1>
       <div className='main-vertical-container'>
           <dev className='options-container' >
             <Input error={errMessage} placeholder ='Carat Weight' search selection onChange={handleCaratChange}/>
@@ -144,9 +149,9 @@ function App() {
             (!carat || !color || !clarity || !cut) ? 
             <></> :
             <div>
-              <Button className='evaluation-button' basic color='violet' type='submit' onClick={handleSubmit} placeholder='Evaluate diamond'>Evaluate Diamond</Button> 
-              <text>{errMessage}</text> 
-              <h1>{price}</h1>
+              {/* <Button className='evaluation-button' basic color='violet' type='submit' onClick={handleSubmit} placeholder='Evaluate diamond'>Evaluate Diamond</Button>  */}
+              {errMessage}
+              <h1>Price: {price}</h1>
               {
               price ? <Button className='evaluation-button' basic color='green' type='submit' onClick={handleSuggestions} placeholder='Find similar goods'>Find Similar Goods</Button> 
               :<></>
@@ -157,9 +162,9 @@ function App() {
           }
 
           {
-            suggesedDiamonds?
+            suggestedDiamonds?
               <div style={{display:'flex', flexDirection:"row", justifyContent:"space-evenly"}}>
-                {suggesedDiamonds.map(diamond =>{
+                {suggestedDiamonds.map(diamond =>{
                   return <Card color='violet'>
                                   <Image src={diamond.imgUrl} />
                                   <Card.Content >
@@ -171,21 +176,12 @@ function App() {
                                     </Card.Meta>
                                   </Card.Content>
                                 </Card>
-                          
-                  // <div style={{width:"50px", height:"50px", border:"10px solid red"}}>
-
-                  // </div>
                   
                 })}
               </div>
               :<></>
             }
-            
-          
-        
       </div>
-      
-           
     </div>
   );
 }
