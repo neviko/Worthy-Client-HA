@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import _ from 'lodash'
 import './App.css';
-import { Button, Dropdown, Input } from 'semantic-ui-react';
+import { Button, Card, CardContent, CardHeader, Dropdown, Image, Input } from 'semantic-ui-react';
 import Spinner from './components/Spinner';
 
 
@@ -30,27 +30,7 @@ const cutOptions = _.map(CUT, (state, index) => ({
   value: state
 }));
 
-const styles= { 
-  optionsContainer: {
-    display:'flex',
-    flexDirection:'row',
-    justifyContent:'space-evenly',
-    alignItems:'center'
-  },
-  mainVerticalContainer: {
-    marginTop:'50px',
-    display:'flex',
-    flexDirection:'column',
-    alignItems:'center'
 
-  },
-  borderColor:{
-    border: '5px solid red !important', 
-    borderColor:'red!important',
-    borderWidth: 5
-  }
-
-} 
 
 function App() {
   const [carat,setCarat] = useState()
@@ -59,11 +39,21 @@ function App() {
   const [cut,setCut] = useState()
   const [price,setPrice] = useState(0)
   const [showSpinner,setShowSpinner] = useState(false)
+  const [errMessage,setErrMessage] = useState('')
+  const [suggesedDiamonds,setSuggesedDiamonds] = useState([])
 
 
   const handleCaratChange = (event,data)=>{
     event.preventDefault()
-    setCarat(data.value)
+    if(data.value > 0 || data.value ==''){
+      setCarat(data.value)
+      setErrMessage('')
+    }
+    else{
+      setErrMessage('Carat weight should be a positive number')
+    }
+  
+    
   }
 
   const handleColorChange = (event,data)=>{
@@ -95,8 +85,34 @@ function App() {
       const url = `http://localhost:3001/evaluation?carat_weight=${carat}&color=${color}&clarity=${clarity}&cut=${cut}`
       const response = await fetch(url,options)
       const data = await response.json()
-      debugger
       setPrice(data.evaluatedPrice)
+
+    }
+    catch(e){
+      console.error('something went wrong while fetching data from API',e.message)
+    }
+    finally{
+      setShowSpinner(false)
+    }
+    
+  }
+
+  const handleSuggestions = async (event)=>{
+    event.preventDefault()
+    setShowSpinner(true)
+
+    try{
+      const options={
+        mode:'cors',
+        headers:{'Content-Type':'application/json', 'Access-Control-Allow-Origin': '*'},
+        method:'GET',
+        cache: "no-cache"
+      }
+      const url = `http://localhost:3001/similar?price=${price}&amount=${4}`
+      const response = await fetch(url,options)
+      const data = await response.json()
+      debugger
+      setSuggesedDiamonds(data.similarDiamonds)
 
     }
     catch(e){
@@ -110,24 +126,62 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Title</h1>
-      <div style={styles.mainVerticalContainer}>
-        <form>
-            <dev style={styles.optionsContainer} >
-              <Input placeholder ='Carat Weight' search selection onChange={handleCaratChange}/>
-              <Dropdown className={styles.borderColor} placeholder='Color' search selection options={colorOptions} onChange={handleColorChange}/>   
-              <Dropdown placeholder='Clarity' search selection options={clarityOptions}onChange={handleClarityChange}/>   
-              <Dropdown placeholder='Cut' search selection options={cutOptions} onChange={handleCutChange} />
-            </dev>
-            {
-              showSpinner?
-              <Spinner></Spinner> :
-              <div></div>
+      <h1>DIamonds Price Calculator</h1>
+      <div className='main-vertical-container'>
+          <dev className='options-container' >
+            <Input error={errMessage} placeholder ='Carat Weight' search selection onChange={handleCaratChange}/>
+            <Dropdown error={!color} placeholder='Color' search selection options={colorOptions} onChange={handleColorChange}/>   
+            <Dropdown error= {!clarity} placeholder='Clarity' search selection options={clarityOptions}onChange={handleClarityChange}/>   
+            <Dropdown error= {!cut} placeholder='Cut' search selection options={cutOptions} onChange={handleCutChange} />
+          </dev>
+          
+          {
+            showSpinner?
+            <Spinner></Spinner> :
+            <div></div>
+          }
+          {
+            (!carat || !color || !clarity || !cut) ? 
+            <></> :
+            <div>
+              <Button className='evaluation-button' basic color='violet' type='submit' onClick={handleSubmit} placeholder='Evaluate diamond'>Evaluate Diamond</Button> 
+              <text>{errMessage}</text> 
+              <h1>{price}</h1>
+              {
+              price ? <Button className='evaluation-button' basic color='green' type='submit' onClick={handleSuggestions} placeholder='Find similar goods'>Find Similar Goods</Button> 
+              :<></>
+              }
+
+            </div>
+            
+          }
+
+          {
+            suggesedDiamonds?
+              <div style={{display:'flex', flexDirection:"row", justifyContent:"space-evenly"}}>
+                {suggesedDiamonds.map(diamond =>{
+                  return <Card color='violet'>
+                                  <Image src={diamond.imgUrl} />
+                                  <Card.Content >
+                                    <Card.Header>
+                                      {diamond.price}
+                                    </Card.Header>
+                                    <Card.Meta textAlign='center'>
+                                      <span className='date'>{diamond.color}, {diamond.clarity}, {diamond.cut}</span>
+                                    </Card.Meta>
+                                  </Card.Content>
+                                </Card>
+                          
+                  // <div style={{width:"50px", height:"50px", border:"10px solid red"}}>
+
+                  // </div>
+                  
+                })}
+              </div>
+              :<></>
             }
             
-            <Button type='submit' onClick={handleSubmit} placeholder='Evaluate diamond'>Evaluate Diamond</Button>
-            <h1>{price}</h1>
-        </form>
+          
         
       </div>
       
