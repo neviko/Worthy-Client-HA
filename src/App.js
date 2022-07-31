@@ -9,6 +9,7 @@ import Spinner from './components/Spinner';
 const COLORS=['D','E','F','G','H','I','J']
 const CLARITY = ['SI2','SI1','VS2','VS1','VVS2','VVS1','IF','FL']
 const CUT = ['POOR','FAIR','GOOD','VERY_GOOD','IDEAL','SUPER_IDEAL']
+const BASE_URL = 'http://localhost:3001'
 
 const colorOptions = _.map(COLORS, (state, index) => ({
   key: index,
@@ -49,14 +50,8 @@ function App() {
         setShowSpinner(true)
   
         try{
-          const options={
-            mode:'cors',
-            headers:{'Content-Type':'application/json', 'Access-Control-Allow-Origin': '*'},
-            method:'GET',
-            cache: "no-cache"
-          }
-          const url = `http://localhost:3001/evaluation?carat_weight=${carat}&color=${color}&clarity=${clarity}&cut=${cut}`
-          const response = await fetch(url,options)
+          const url = `${BASE_URL}/evaluation?carat_weight=${carat}&color=${color}&clarity=${clarity}&cut=${cut}`
+          const response = await fetch(url,{method:'GET'})
           const data = await response.json()
           setPrice(data.evaluatedPrice)
   
@@ -106,17 +101,10 @@ function App() {
     event.preventDefault()
     setShowSpinner(true)
 
-    try{
-      const options={
-        mode:'cors',
-        headers:{'Content-Type':'application/json', 'Access-Control-Allow-Origin': '*'},
-        method:'GET',
-        cache: "no-cache"
-      }
-      const url = `http://localhost:3001/similar?price=${price}&amount=${4}`
-      const response = await fetch(url,options)
+    try{    
+      const url = `${BASE_URL}/similar?price=${price}&amount=${4}`
+      const response = await fetch(url,{method:'GET'})
       const data = await response.json()
-      debugger
       setSuggestedDiamonds(data.similarDiamonds)
 
     }
@@ -166,16 +154,16 @@ function App() {
               <div style={{display:'flex', flexDirection:"row", justifyContent:"space-evenly"}}>
                 {suggestedDiamonds.map(diamond =>{
                   return <Card color='violet'>
-                                  <Image src={diamond.imgUrl} />
-                                  <Card.Content >
-                                    <Card.Header>
-                                      {diamond.price}
-                                    </Card.Header>
-                                    <Card.Meta textAlign='center'>
-                                      <span className='date'>{diamond.color}, {diamond.clarity}, {diamond.cut}</span>
-                                    </Card.Meta>
-                                  </Card.Content>
-                                </Card>
+                            <Image src={diamond.imgUrl} />
+                            <Card.Content >
+                              <Card.Header>
+                                {diamond.price}
+                              </Card.Header>
+                              <Card.Meta textAlign='center'>
+                                <span className='date'>{diamond.color}, {diamond.clarity}, {diamond.cut}</span>
+                              </Card.Meta>
+                            </Card.Content>
+                          </Card>
                   
                 })}
               </div>
